@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>MC Classic Klonu</title>
+  <title>MC Classic Klonu - Chunk Sistemi</title>
   <style>
     body { margin:0; overflow:hidden; background:#000; }
     #ui {
@@ -35,24 +35,37 @@
     };
     let activeBlock = 1;
 
-    // Dünya oluştur
-    const size = 16;
-    const blocks = [];
-    for(let x=0;x<size;x++){
-      for(let z=0;z<size;z++){
-        const h = 3 + Math.floor(Math.random()*2);
-        for(let y=0;y<h;y++){
-          const cube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats[1]);
-          cube.position.set(x,y,z);
-          scene.add(cube);
-          blocks.push(cube);
+    // Chunk parametreleri
+    const CHUNK_SIZE = 16;
+    const WORLD_SIZE = 4; // 4x4 chunk → 64x64 blok
+    const chunks = [];
+
+    function generateChunk(cx, cz) {
+      const group = new THREE.Group();
+      for(let x=0;x<CHUNK_SIZE;x++){
+        for(let z=0;z<CHUNK_SIZE;z++){
+          const h = 2 + Math.floor(Math.random()*3);
+          for(let y=0;y<h;y++){
+            const cube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats[1]);
+            cube.position.set(cx*CHUNK_SIZE+x, y, cz*CHUNK_SIZE+z);
+            group.add(cube);
+          }
         }
+      }
+      scene.add(group);
+      return group;
+    }
+
+    // Dünya chunk’larını oluştur
+    for(let cx=0; cx<WORLD_SIZE; cx++){
+      for(let cz=0; cz<WORLD_SIZE; cz++){
+        chunks.push(generateChunk(cx, cz));
       }
     }
 
     // Kamera
-    camera.position.set(size/2, size, size*1.5);
-    camera.lookAt(size/2,0,size/2);
+    camera.position.set(32, 20, 80);
+    camera.lookAt(32,0,32);
 
     // WASD hareket
     const keys = {};
@@ -65,43 +78,18 @@
     document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
 
     function updateCamera() {
-      const speed = 0.1;
+      const speed = 0.5;
       if (keys['w']) camera.position.z -= speed;
       if (keys['s']) camera.position.z += speed;
       if (keys['a']) camera.position.x -= speed;
       if (keys['d']) camera.position.x += speed;
-      camera.lookAt(size/2,0,size/2);
+      camera.lookAt(32,0,32);
     }
 
-    // Fare ile yerleştir/kır
-    renderer.domElement.addEventListener('mousedown', e => {
-      const mouse = new THREE.Vector2(
-        (e.clientX / innerWidth) * 2 - 1,
-        -(e.clientY / innerHeight) * 2 + 1
-      );
-      const raycaster = new THREE.Raycaster();
-      raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(blocks);
-      if (intersects.length > 0) {
-        const hit = intersects[0];
-        if (e.shiftKey) {
-          scene.remove(hit.object);
-          blocks.splice(blocks.indexOf(hit.object), 1);
-        } else {
-          const normal = hit.face.normal;
-          const pos = hit.object.position.clone().add(normal);
-          const cube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats[activeBlock]);
-          cube.position.copy(pos);
-          scene.add(cube);
-          blocks.push(cube);
-        }
-      }
-    });
-
-    function animate() {
+    function animate(){
       requestAnimationFrame(animate);
       updateCamera();
-      renderer.render(scene, camera);
+      renderer.render(scene,camera);
     }
     animate();
   </script>
