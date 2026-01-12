@@ -2,11 +2,11 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>ASCII Snake with Walls</title>
+  <title>ASCII Snake - Çerçeveli</title>
   <style>
     body {
-      background: #000; /* siyah arka plan */
-      color: #0f0;      /* yeşil ASCII karakterler */
+      background: #000;
+      color: #0f0;
       font-family: monospace;
       text-align: center;
     }
@@ -17,7 +17,7 @@
   </style>
 </head>
 <body>
-  <h1>🐍 ASCII Snake + Engeller</h1>
+  <h1>🐍 ASCII Snake + Duvar Çerçevesi</h1>
   <p>Yön tuşları ile oynayabilirsin</p>
   <pre id="game"></pre>
 
@@ -26,26 +26,30 @@
     let snake = [{x:5,y:5}];
     let food = {x:10,y:7};
     let dir = {x:1,y:0};
+    let walls = [];
 
-    // Engellerin koordinatları
-    let walls = [
-      {x:3,y:3},{x:4,y:3},{x:5,y:3},
-      {x:10,y:10},{x:11,y:10},{x:12,y:10},
-      {x:15,y:5},{x:15,y:6},{x:15,y:7}
-    ];
+    // Çerçeve duvarları oluştur
+    for (let x = 0; x < width; x++) {
+      walls.push({x:x, y:0});               // üst kenar
+      walls.push({x:x, y:height - 1});      // alt kenar
+    }
+    for (let y = 0; y < height; y++) {
+      walls.push({x:0, y:y});               // sol kenar
+      walls.push({x:width - 1, y:y});       // sağ kenar
+    }
 
     function draw() {
       let screen = "";
-      for (let y=0; y<height; y++) {
-        for (let x=0; x<width; x++) {
-          if (snake.some(s => s.x===x && s.y===y)) {
-            screen += "O"; // yılan
-          } else if (food.x===x && food.y===y) {
-            screen += "*"; // yem
-          } else if (walls.some(w => w.x===x && w.y===y)) {
-            screen += "#"; // engel
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          if (walls.some(w => w.x === x && w.y === y)) {
+            screen += "#";
+          } else if (snake.some(s => s.x === x && s.y === y)) {
+            screen += "O";
+          } else if (food.x === x && food.y === y) {
+            screen += "*";
           } else {
-            screen += " "; // boşluk
+            screen += " ";
           }
         }
         screen += "\n";
@@ -54,30 +58,36 @@
     }
 
     function update() {
-      let head = {x:snake[0].x+dir.x, y:snake[0].y+dir.y};
+      let head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
       snake.unshift(head);
 
-      if (head.x===food.x && head.y===food.y) {
-        food = {x:Math.floor(Math.random()*width), y:Math.floor(Math.random()*height)};
+      if (head.x === food.x && head.y === food.y) {
+        food = {
+          x: Math.floor(Math.random() * (width - 2)) + 1,
+          y: Math.floor(Math.random() * (height - 2)) + 1
+        };
       } else {
         snake.pop();
       }
 
-      // Çarpma kontrolü
-      if (head.x<0 || head.y<0 || head.x>=width || head.y>=height ||
-          snake.slice(1).some(s => s.x===head.x && s.y===head.y) ||
-          walls.some(w => w.x===head.x && w.y===head.y)) {
+      if (
+        head.x < 0 || head.y < 0 || head.x >= width || head.y >= height ||
+        snake.slice(1).some(s => s.x === head.x && s.y === head.y) ||
+        walls.some(w => w.x === head.x && w.y === head.y)
+      ) {
         alert("Oyun Bitti! 🧱🐍");
         snake = [{x:5,y:5}];
+        dir = {x:1,y:0};
       }
+
       draw();
     }
 
     document.addEventListener("keydown", e => {
-      if (e.key==="ArrowUp") dir={x:0,y:-1};
-      if (e.key==="ArrowDown") dir={x:0,y:1};
-      if (e.key==="ArrowLeft") dir={x:-1,y:0};
-      if (e.key==="ArrowRight") dir={x:1,y:0};
+      if (e.key === "ArrowUp") dir = {x:0, y:-1};
+      if (e.key === "ArrowDown") dir = {x:0, y:1};
+      if (e.key === "ArrowLeft") dir = {x:-1, y:0};
+      if (e.key === "ArrowRight") dir = {x:1, y:0};
     });
 
     setInterval(update, 200);
