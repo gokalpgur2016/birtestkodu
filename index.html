@@ -5,11 +5,15 @@
   <title>MC Classic Klonu</title>
   <style>
     body { margin:0; overflow:hidden; background:#000; }
-    #ui { position:fixed; top:10px; left:10px; color:#0f0; font-family:monospace; }
+    #ui {
+      position:fixed; top:10px; left:10px;
+      background:#111; color:#0f0; font-family:monospace;
+      padding:8px 12px; border:1px solid #0f0; z-index:10;
+    }
   </style>
 </head>
 <body>
-  <div id="ui">WASD: hareket • Fare: kır/yerleştir • 1–3 blok seç</div>
+  <div id="ui">WASD: hareket • Fare: yerleştir/kır • 1-3: blok seç</div>
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
   <script>
     const scene = new THREE.Scene();
@@ -18,37 +22,86 @@
     renderer.setSize(innerWidth, innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    // Basit ışık
+    // Işık
     const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(10,10,10);
+    light.position.set(10, 20, 10);
     scene.add(light);
 
-    // Küp materyalleri
+    // Blok materyalleri
     const mats = {
-      grass: new THREE.MeshLambertMaterial({color:0x3cb043}),
-      dirt: new THREE.MeshLambertMaterial({color:0x8d6e63}),
-      stone: new THREE.MeshLambertMaterial({color:0x888888})
+      1: new THREE.MeshLambertMaterial({color:0x3cb043}), // grass
+      2: new THREE.MeshLambertMaterial({color:0x8d6e63}), // dirt
+      3: new THREE.MeshLambertMaterial({color:0x888888})  // stone
     };
+    let activeBlock = 1;
 
     // Dünya oluştur
     const size = 16;
+    const blocks = [];
     for(let x=0;x<size;x++){
       for(let z=0;z<size;z++){
-        const h = 3 + Math.floor(Math.random()*3);
+        const h = 3 + Math.floor(Math.random()*2);
         for(let y=0;y<h;y++){
-          const cube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats.grass);
+          const cube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats[1]);
           cube.position.set(x,y,z);
           scene.add(cube);
+          blocks.push(cube);
         }
       }
     }
 
+    // Kamera
     camera.position.set(size/2, size, size*1.5);
     camera.lookAt(size/2,0,size/2);
 
-    function animate(){
+    // WASD hareket
+    const keys = {};
+    document.addEventListener('keydown', e => {
+      keys[e.key.toLowerCase()] = true;
+      if (e.key === '1') activeBlock = 1;
+      if (e.key === '2') activeBlock = 2;
+      if (e.key === '3') activeBlock = 3;
+    });
+    document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+    function updateCamera() {
+      const speed = 0.1;
+      if (keys['w']) camera.position.z -= speed;
+      if (keys['s']) camera.position.z += speed;
+      if (keys['a']) camera.position.x -= speed;
+      if (keys['d']) camera.position.x += speed;
+      camera.lookAt(size/2,0,size/2);
+    }
+
+    // Fare ile yerleştir/kır
+    renderer.domElement.addEventListener('mousedown', e => {
+      const mouse = new THREE.Vector2(
+        (e.clientX / innerWidth) * 2 - 1,
+        -(e.clientY / innerHeight) * 2 + 1
+      );
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(blocks);
+      if (intersects.length > 0) {
+        const hit = intersects[0];
+        if (e.shiftKey) {
+          scene.remove(hit.object);
+          blocks.splice(blocks.indexOf(hit.object), 1);
+        } else {
+          const normal = hit.face.normal;
+          const pos = hit.object.position.clone().add(normal);
+          const cube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats[activeBlock]);
+          cube.position.copy(pos);
+          scene.add(cube);
+          blocks.push(cube);
+        }
+      }
+    });
+
+    function animate() {
       requestAnimationFrame(animate);
-      renderer.render(scene,camera);
+      updateCamera();
+      renderer.render(scene, camera);
     }
     animate();
   </script>
