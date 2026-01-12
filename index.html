@@ -1,129 +1,159 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Mobil ASCII Snake</title>
+  <meta charset="UTF-8" />
+  <title>MC Classic Klonu — Prototip</title>
   <style>
-    body {
-      background: #000;
-      color: #0f0;
-      font-family: monospace;
-      text-align: center;
-      margin: 0;
-      padding: 0;
-    }
-    pre {
-      font-size: 14px;
-      line-height: 14px;
-      white-space: pre;
-    }
-    .controls {
-      margin-top: 10px;
-    }
-    .controls button {
-      background: #222;
-      color: #0f0;
-      border: 1px solid #0f0;
-      padding: 10px 20px;
-      margin: 5px;
-      font-size: 16px;
-      border-radius: 5px;
-    }
-    .controls button:active {
-      background: #0f0;
-      color: #000;
-    }
+    body { margin:0; background:#000; color:#0f0; font-family:monospace; }
+    #ui { position:fixed; top:10px; left:10px; background:#111; color:#0f0; padding:8px 12px; border:1px solid #0f0; }
+    canvas { display:block; width:100vw; height:100vh; }
+    .slot { display:inline-block; padding:4px 8px; margin-right:6px; border:1px solid #0f0; }
+    .active { background:#0f0; color:#000; }
   </style>
 </head>
 <body>
-  <h1>🐍 Mobil ASCII Snake</h1>
-  <pre id="game"></pre>
-
-  <!-- Mobil kontrol butonları -->
-  <div class="controls">
-    <div>
-      <button onclick="dir={x:0,y:-1}">⬆️</button>
-    </div>
-    <div>
-      <button onclick="dir={x:-1,y:0}">⬅️</button>
-      <button onclick="dir={x:1,y:0}">➡️</button>
-    </div>
-    <div>
-      <button onclick="dir={x:0,y:1}">⬇️</button>
-    </div>
+  <div id="ui">
+    <div>WASD: hareket • Fare: kır/yerleştir • 1–3: blok seç • Shift: kır, Ctrl: yerleştir</div>
+    <div id="inv"></div>
   </div>
-
+  <canvas id="c"></canvas>
   <script>
-    const width = 20, height = 15;
-    let snake = [{x:5,y:5}];
-    let food = {x:10,y:7};
-    let dir = {x:1,y:0};
-    let walls = [];
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    function resize(){ canvas.width = innerWidth; canvas.height = innerHeight; }
+    addEventListener('resize', resize); resize();
 
-    // Çerçeve duvarları
-    for (let x = 0; x < width; x++) {
-      walls.push({x:x, y:0});
-      walls.push({x:x, y:height-1});
-    }
-    for (let y = 0; y < height; y++) {
-      walls.push({x:0, y:y});
-      walls.push({x:width-1, y:y});
-    }
+    // Dünya parametreleri
+    const W = 32, H = 32, L = 16; // x,y,z boyutları
+    const world = new Array(W).fill(0).map(()=> new Array(H).fill(0).map(()=> new Array(L).fill(0)));
+    const AIR=0, GRASS=1, DIRT=2, STONE=3;
+    const BLOCKS = {
+      [GRASS]: {name:'Grass', colorTop:'#3cb043', colorSide:'#2e7d32'},
+      [DIRT]:  {name:'Dirt',  colorTop:'#8d6e63', colorSide:'#6d4c41'},
+      [STONE]: {name:'Stone', colorTop:'#b0bec5', colorSide:'#90a4ae'}
+    };
 
-    function draw() {
-      let screen = "";
-      for (let y=0; y<height; y++) {
-        for (let x=0; x<width; x++) {
-          if (walls.some(w => w.x===x && w.y===y)) {
-            screen += "#";
-          } else if (snake.some(s => s.x===x && s.y===y)) {
-            screen += "O";
-          } else if (food.x===x && food.y===y) {
-            screen += "*";
-          } else {
-            screen += " ";
+    // Basit arazi: perlin yok—katmanlı doldurma
+    for(let x=0;x<W;x++){
+      for(let y=0;y<H;y++){
+        const h = 6 + Math.floor(3*Math.sin(x*0.3)+3*Math.cos(y*0.25)); // yükseklik
+        for(let z=0; z<L; z++){
+          if(z<h){
+            world[x][y][z] = (z===h-1) ? GRASS : (z>h-4 ? DIRT : STONE);
           }
         }
-        screen += "\n";
       }
-      document.getElementById("game").textContent = screen;
     }
 
-    function update() {
-      let head = {x:snake[0].x+dir.x, y:snake[0].y+dir.y};
-      snake.unshift(head);
+    // Kamera ve kontrol
+    let cam = { x: W/2, y: H/2, z: 10, zoom: 24, rot: 45 * Math.PI/180 }; // izometrik
+    const keys = {};
+    addEventListener('keydown', e=>{ keys[e.key.toLowerCase()] = true; updateInvHighlight(e.key); });
+    addEventListener('keyup', e=>{ keys[e.key.toLowerCase()] = false; });
 
-      if (head.x===food.x && head.y===food.y) {
-        food = {
-          x:Math.floor(Math.random()*(width-2))+1,
-          y:Math.floor(Math.random()*(height-2))+1
-        };
-      } else {
-        snake.pop();
-      }
+    // Envanter
+    let activeBlock = GRASS;
+    const invEl = document.getElementById('inv');
+    const slots = [GRASS, DIRT, STONE];
+    function renderInv(){
+      invEl.innerHTML = slots.map((b,i)=>{
+        const cls = (b===activeBlock)?'slot active':'slot';
+        return `<span class="${cls}">${i+1}: ${BLOCKS[b].name}</span>`;
+      }).join('');
+    }
+    function updateInvHighlight(k){
+      if(k==='1') activeBlock = GRASS;
+      if(k==='2') activeBlock = DIRT;
+      if(k==='3') activeBlock = STONE;
+      renderInv();
+    }
+    renderInv();
 
-      if (
-        head.x<0 || head.y<0 || head.x>=width || head.y>=height ||
-        snake.slice(1).some(s => s.x===head.x && s.y===head.y) ||
-        walls.some(w => w.x===head.x && w.y===head.y)
-      ) {
-        alert("Oyun Bitti! 🧱🐍");
-        snake = [{x:5,y:5}];
-        dir = {x:1,y:0};
-      }
-      draw();
+    // İzometrik projeksiyon
+    function iso(x,y,z){
+      const s = cam.zoom;
+      const ix = (x - y) * s * Math.cos(cam.rot);
+      const iy = (x + y) * s * Math.sin(cam.rot) - z * s * 0.8;
+      return { x: canvas.width/2 + ix - (cam.x - cam.y)*s*Math.cos(cam.rot),
+               y: canvas.height/2 + iy - (cam.x + cam.y)*s*Math.sin(cam.rot) + cam.z* s*0.8 };
     }
 
-    // Klavye desteği (PC için)
-    document.addEventListener("keydown", e => {
-      if (e.key==="ArrowUp") dir={x:0,y:-1};
-      if (e.key==="ArrowDown") dir={x:0,y:1};
-      if (e.key==="ArrowLeft") dir={x:-1,y:0};
-      if (e.key==="ArrowRight") dir={x:1,y:0};
+    // Ray-pick (yaklaşık): ekran noktasını grid’e ters projeksiyonla tahmin
+    function screenToGrid(mx,my){
+      // kaba tahmin—izometrikte ters dönüşüm
+      const s = cam.zoom;
+      const dx = mx - canvas.width/2 + (cam.x - cam.y)*s*Math.cos(cam.rot);
+      const dy = my - canvas.height/2 + (cam.x + cam.y)*s*Math.sin(cam.rot) - cam.z*s*0.8;
+      const a = Math.cos(cam.rot), b = Math.sin(cam.rot);
+      // izometrik çözüm
+      let x = (dx/a + dy/b)/ (2*s);
+      let y = (dy/b - dx/a)/ (2*s);
+      x = Math.round(x); y = Math.round(y);
+      // en üst blok z’yi bul
+      if(x<0||y<0||x>=W||y>=H) return null;
+      for(let z=L-1; z>=0; z--){
+        if(world[x][y][z]!==AIR) return {x,y,z};
+      }
+      return {x,y,z:0};
+    }
+
+    // Fare ile kır/yerleştir
+    canvas.addEventListener('mousedown', e=>{
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      const g = screenToGrid(mx,my);
+      if(!g) return;
+      if(e.shiftKey){
+        // kır
+        if(world[g.x][g.y][g.z]!==AIR) world[g.x][g.y][g.z]=AIR;
+      }else{
+        // yerleştir: üstteki bloğun üzerine
+        let z = g.z;
+        if(world[g.x][g.y][z]!==AIR) z = Math.min(z+1, L-1);
+        if(world[g.x][g.y][z]===AIR) world[g.x][g.y][z]=activeBlock;
+      }
     });
 
-    setInterval(update, 200);
-    draw();
+    // Oyun döngüsü
+    function step(){
+      // hareket
+      const spd = 0.15;
+      if(keys['w']) cam.y -= spd;
+      if(keys['s']) cam.y += spd;
+      if(keys['a']) cam.x -= spd;
+      if(keys['d']) cam.x += spd;
+      if(keys['q']) cam.zoom = Math.max(12, cam.zoom-0.5);
+      if(keys['e']) cam.zoom = Math.min(40, cam.zoom+0.5);
+
+      draw();
+      requestAnimationFrame(step);
+    }
+
+    function draw(){
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      // z-sıralı çizim: uzak katmanlar önce
+      for(let z=0; z<L; z++){
+        for(let x=0; x<W; x++){
+          for(let y=0; y<H; y++){
+            const b = world[x][y][z];
+            if(b===AIR) continue;
+            const p = iso(x,y,z);
+            // üst yüzey
+            ctx.fillStyle = BLOCKS[b].colorTop;
+            ctx.fillRect(p.x-8, p.y-8, 16, 16);
+            // yan gölge
+            ctx.fillStyle = BLOCKS[b].colorSide;
+            ctx.fillRect(p.x-8, p.y+8, 16, 6);
+            ctx.fillRect(p.x+8, p.y-8, 6, 16);
+          }
+        }
+      }
+      // basit yer paylaşımlı grid sınırı
+      ctx.strokeStyle = '#0f0';
+      ctx.strokeRect(10,10,canvas.width-20,canvas.height-20);
+    }
+
+    step();
   </script>
 </body>
 </html>
