@@ -1,97 +1,104 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>MC Classic Klonu - Chunk Sistemi</title>
-  <style>
-    body { margin:0; overflow:hidden; background:#000; }
-    #ui {
-      position:fixed; top:10px; left:10px;
-      background:#111; color:#0f0; font-family:monospace;
-      padding:8px 12px; border:1px solid #0f0; z-index:10;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gökalp'in Kanalı | Komut Bloğu Projeleri</title>
+    <style>
+        /* Minecraft Font ve Genel Tasarım */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #1a1a1a;
+            color: white;
+            text-align: center;
+        }
+
+        header {
+            background: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1627398242454-45a1465c2479?auto=format&fit=crop&w=1350&q=80'); /* Örnek Minecraft Arkaplanı */
+            background-size: cover;
+            padding: 80px 20px;
+            border-bottom: 5px solid #3f3f3f;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            text-shadow: 4px 4px #000;
+            margin-bottom: 10px;
+            color: #ffcc00;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .video-card {
+            background-color: #333;
+            border: 3px solid #555;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            transition: transform 0.3s;
+        }
+
+        .video-card:hover {
+            transform: scale(1.02);
+            border-color: #777;
+        }
+
+        .btn-abone {
+            display: inline-block;
+            background-color: #ff0000;
+            color: white;
+            padding: 15px 30px;
+            text-decoration: none;
+            font-weight: bold;
+            border-radius: 5px;
+            font-size: 1.2rem;
+            box-shadow: 0 4px #8b0000;
+            margin-top: 20px;
+        }
+
+        .btn-abone:active {
+            box-shadow: 0 2px #8b0000;
+            transform: translateY(2px);
+        }
+
+        footer {
+            background-color: #111;
+            padding: 20px;
+            margin-top: 50px;
+            font-size: 0.9rem;
+            color: #777;
+        }
+    </style>
 </head>
 <body>
-  <div id="ui">WASD: hareket • Fare: yerleştir/kır • 1-3: blok seç</div>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
-  <script>
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer();
-    renderer.setSize(innerWidth, innerHeight);
-    document.body.appendChild(renderer.domElement);
 
-    // Işık
-    const light = new THREE.DirectionalLight(0xffffff, 1);
-    light.position.set(10, 20, 10);
-    scene.add(light);
+    <header>
+        <h1>GÖKALP'İN KANALI</h1>
+        <p>Komut Bloğu ile Minik ve Harika Projeler!</p>
+        <a href="https://www.youtube.com/@GokalpinKanali" target="_blank" class="btn-abone">ABONE OL</a>
+    </header>
 
-    // Blok materyalleri
-    const mats = {
-      1: new THREE.MeshLambertMaterial({color:0x3cb043}), // grass
-      2: new THREE.MeshLambertMaterial({color:0x8d6e63}), // dirt
-      3: new THREE.MeshLambertMaterial({color:0x888888})  // stone
-    };
-    let activeBlock = 1;
+    <div class="container">
+        <h2>Son Videom</h2>
+        <div class="video-card">
+            <iframe width="100%" height="450" src="https://www.youtube.com/embed/UQaYDy3hcNg" frameborder="0" allowfullscreen></iframe>
+            <h3>Komut Bloğu ile Neler Yapılabilir?</h3>
+            <p>Bu videoda Minecraft'ta komut bloklarını kullanarak sınırları zorladık. Detaylar videoda!</p>
+        </div>
 
-    // Chunk parametreleri
-    const CHUNK_SIZE = 16;
-    const WORLD_SIZE = 4; // 4x4 chunk → 64x64 blok
-    const chunks = [];
+        <h2>Hakkımda</h2>
+        <p>Merhaba! Ben Gökalp. Bu kanalda Minecraft dünyasında teknik işler, komut blokları ve yaratıcı projeler geliştiriyorum. Eğer sen de Minecraft'ın derinliklerini merak ediyorsan doğru yerdesin!</p>
+    </div>
 
-    function generateChunk(cx, cz) {
-      const group = new THREE.Group();
-      for(let x=0;x<CHUNK_SIZE;x++){
-        for(let z=0;z<CHUNK_SIZE;z++){
-          const h = 2 + Math.floor(Math.random()*3);
-          for(let y=0;y<h;y++){
-            const cube = new THREE.Mesh(new THREE.BoxGeometry(1,1,1), mats[1]);
-            cube.position.set(cx*CHUNK_SIZE+x, y, cz*CHUNK_SIZE+z);
-            group.add(cube);
-          }
-        }
-      }
-      scene.add(group);
-      return group;
-    }
+    <footer>
+        &copy; 2024 Gökalp'in Kanalı - Tüm Hakları Saklıdır.
+    </footer>
 
-    // Dünya chunk’larını oluştur
-    for(let cx=0; cx<WORLD_SIZE; cx++){
-      for(let cz=0; cz<WORLD_SIZE; cz++){
-        chunks.push(generateChunk(cx, cz));
-      }
-    }
-
-    // Kamera
-    camera.position.set(32, 20, 80);
-    camera.lookAt(32,0,32);
-
-    // WASD hareket
-    const keys = {};
-    document.addEventListener('keydown', e => {
-      keys[e.key.toLowerCase()] = true;
-      if (e.key === '1') activeBlock = 1;
-      if (e.key === '2') activeBlock = 2;
-      if (e.key === '3') activeBlock = 3;
-    });
-    document.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
-
-    function updateCamera() {
-      const speed = 0.5;
-      if (keys['w']) camera.position.z -= speed;
-      if (keys['s']) camera.position.z += speed;
-      if (keys['a']) camera.position.x -= speed;
-      if (keys['d']) camera.position.x += speed;
-      camera.lookAt(32,0,32);
-    }
-
-    function animate(){
-      requestAnimationFrame(animate);
-      updateCamera();
-      renderer.render(scene,camera);
-    }
-    animate();
-  </script>
 </body>
 </html>
